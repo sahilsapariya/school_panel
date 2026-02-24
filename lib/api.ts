@@ -3,9 +3,15 @@
  * - Sends credentials (cookies) with every request.
  * - Handles 401 globally (redirect to login).
  * - Typed request/response.
+ * - Uses env-based backend URL (dev vs production).
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const isDev = process.env.NODE_ENV === "development";
+const API_BASE =
+  (isDev ? process.env.NEXT_PUBLIC_API_URL_DEV : process.env.NEXT_PUBLIC_API_URL) ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL_DEV ??
+  "";
 
 export class ApiError extends Error {
   constructor(
