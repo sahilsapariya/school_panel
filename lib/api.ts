@@ -41,6 +41,8 @@ export async function apiRequest<T>(
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
+      // Clear panel cookie first to break redirect loop (middleware won't redirect back to dashboard)
+      await fetch("/api/auth/clear-cookie", { method: "POST", credentials: "include" }).catch(() => {});
       window.location.href = "/login";
     }
     throw new ApiError("Unauthorized", 401);
