@@ -2,7 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, usePathname } from "next/navigation";
-import { login as loginApi, logout as logoutApi, getSession } from "@/lib/auth";
+import {
+  login as loginApi,
+  logout as logoutApi,
+  getSession,
+  setPanelAuthCookie,
+  clearPanelAuthCookie,
+} from "@/lib/auth";
 import type { LoginFormValues } from "@/lib/schemas";
 
 export function useAuth() {
@@ -22,14 +28,22 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: (values: LoginFormValues) => loginApi(values),
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // When panel and API are on different domains, set panel-domain cookie so middleware sees auth
+      const token = data?.data?.access_token;
+      if (token) {
+        await setPanelAuthCookie(token);
+      }
       queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     },
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logoutApi,
+    mutationFn: async () => {
+      await logoutApi();
+      await clearPanelAuthCookie();
+    },
     onSuccess: () => {
       queryClient.clear();
       router.push("/login");
