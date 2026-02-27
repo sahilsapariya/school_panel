@@ -17,9 +17,14 @@ const TENANT_KEY = (id: string) => ["platform", "tenant", id];
 const PLANS_KEY = ["platform", "plans"];
 const PLAN_FEATURES_KEY = ["platform", "plan-features"];
 
+/** Reduces refetch storms when navigating; data stays fresh for 2 min */
+const STALE_TIME = 2 * 60 * 1000;
+
 export function usePlanFeatures() {
   return useQuery({
     queryKey: PLAN_FEATURES_KEY,
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ data?: unknown }>("/api/platform/plan-features");
       const list = Array.isArray(res?.data) ? res.data : [];
@@ -34,6 +39,8 @@ export function usePlanFeatures() {
 export function useDashboard() {
   return useQuery({
     queryKey: DASHBOARD_KEY,
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ data?: Record<string, unknown> }>(
         "/api/platform/dashboard"
@@ -64,6 +71,8 @@ export function useDashboard() {
 export function useTenants(page: number, limit: number) {
   return useQuery({
     queryKey: TENANTS_KEY(page, limit),
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{
         data?: { items?: unknown[]; pagination?: { page?: number; per_page?: number; total?: number; pages?: number } };
@@ -97,6 +106,8 @@ export function useTenants(page: number, limit: number) {
 export function useTenant(id: string | null) {
   return useQuery({
     queryKey: TENANT_KEY(id ?? ""),
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ success?: boolean; data?: unknown }>(`/api/platform/tenants/${id}`);
       const r = (res?.data ?? {}) as Record<string, unknown>;
@@ -122,6 +133,8 @@ export function useTenant(id: string | null) {
 export function usePlans() {
   return useQuery({
     queryKey: PLANS_KEY,
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ data?: unknown }>("/api/platform/plans");
       const list = Array.isArray(res?.data) ? res.data : [];
@@ -175,6 +188,8 @@ export function useAuditLogs(
 ) {
   return useQuery({
     queryKey: AUDIT_LOGS_KEY(page, perPage, filters),
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
       if (filters.action) params.set("action", filters.action);
@@ -202,6 +217,8 @@ const SETTINGS_KEY = ["platform", "settings"];
 export function usePlatformSettings() {
   return useQuery({
     queryKey: SETTINGS_KEY,
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ data?: Record<string, string | null> }>("/api/platform/settings");
       return (res as { data?: Record<string, string | null> })?.data ?? {};
@@ -218,6 +235,8 @@ const TENANT_ADMINS_KEY = (tenantId: string) => ["platform", "tenant", tenantId,
 export function useTenantAdmins(tenantId: string | null) {
   return useQuery({
     queryKey: TENANT_ADMINS_KEY(tenantId ?? ""),
+    staleTime: STALE_TIME,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const res = await api.get<{ data?: { admins?: unknown[] } }>(`/api/platform/tenants/${tenantId}/admins`);
       const admins = (res as { data?: { admins?: Array<{ id: string; email: string; name?: string }> } })?.data?.admins ?? [];

@@ -1,7 +1,7 @@
 /**
  * Centralized API client.
- * - Sends credentials (cookies) with every request.
- * - Handles 401 globally (redirect to login).
+ * - Sends Authorization header with token from cookie (cross-origin backend doesn't receive cookies).
+ * - Handles 401 globally (redirect to login after clearing panel cookie).
  * - Typed request/response.
  * - Uses env-based backend URL (dev vs production).
  */
@@ -12,6 +12,18 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_URL_DEV ??
   "";
+
+/** Reads auth token from panel cookie (readable for cross-origin API calls) */
+function getAuthToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/auth-token=([^;]+)/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1].trim());
+  } catch {
+    return match[1].trim();
+  }
+}
 
 export class ApiError extends Error {
   constructor(
@@ -30,13 +42,19 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
 
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(fullUrl, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
   });
 
   if (res.status === 401) {

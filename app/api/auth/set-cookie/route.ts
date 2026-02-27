@@ -1,7 +1,7 @@
 /**
- * Sets auth-token cookie for the panel domain so middleware can detect logged-in state.
- * Required when panel and API are on different domains (cross-site).
- * The backend sets its own cookie for API requests; this sets one for the panel.
+ * Sets auth-token cookie for the panel domain.
+ * Readable (httpOnly: false) so the API client can send it via Authorization header for backend requests.
+ * Required when panel and backend are on different domains - the backend's Set-Cookie won't be stored cross-origin.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true });
     response.cookies.set("auth-token", token, {
       path: "/",
-      httpOnly: true,
+      httpOnly: false, // Must be readable so api.ts can send it via Authorization header (cross-origin backend)
       secure: isProd,
       sameSite: "lax",
-      maxAge: 60 * 15, // 15 min, match backend JWT expiry
+      maxAge: 60 * 60 * 60, // 60 hours, match backend JWT expiry
     });
     return response;
   } catch {

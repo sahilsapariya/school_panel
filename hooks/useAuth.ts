@@ -23,19 +23,23 @@ export function useAuth() {
     queryFn: getSession,
     retry: false,
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     enabled: !isLoginPage,
   });
 
   const loginMutation = useMutation({
     mutationFn: (values: LoginFormValues) => loginApi(values),
     onSuccess: async (data) => {
-      // When panel and API are on different domains, set panel-domain cookie so middleware sees auth
       const token = data?.data?.access_token;
-      if (token) {
-        await setPanelAuthCookie(token);
+      if (!token) {
+        return;
       }
+      await setPanelAuthCookie(token);
       queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/dashboard");
+      // Full page nav ensures cookie is sent and avoids RSC/prefetch issues
+      window.location.href = "/dashboard";
     },
   });
 
