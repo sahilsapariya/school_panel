@@ -45,7 +45,8 @@ import {
   notificationTemplateSchema,
   type NotificationTemplateFormValues,
 } from "@/lib/schemas";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, Mail } from "lucide-react";
 
 const NOTIFICATION_CATEGORIES = ["AUTH", "STUDENT", "PLATFORM", "FINANCE", "SYSTEM"];
@@ -158,6 +159,7 @@ function NotificationTemplatesPageInner() {
         body_template: values.body,
         tenant_id: values.tenantId || null,
       });
+      toast.success("Template created");
       setCreateOpen(false);
       createForm.reset({
         subject: "",
@@ -169,7 +171,7 @@ function NotificationTemplatesPageInner() {
       });
       await invalidateTemplates();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -204,11 +206,12 @@ function NotificationTemplatesPageInner() {
         subject_template: values.subject,
         body_template: values.body,
       });
+      toast.success("Template updated");
       setEditOpen(false);
       setTemplateToEdit(null);
       await invalidateTemplates();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -233,7 +236,9 @@ function NotificationTemplatesPageInner() {
       const d = res?.data ?? {};
       setPreviewData({ subject: d.subject ?? "", body: d.body ?? "" });
     } catch (e) {
-      setPreviewError(e instanceof Error ? e.message : "Preview failed");
+      const msg = getErrorMessage(e);
+      setPreviewError(msg);
+      toast.error(msg);
     } finally {
       setPreviewLoading(false);
     }
@@ -256,7 +261,9 @@ function NotificationTemplatesPageInner() {
       const d = res?.data ?? {};
       setPreviewData({ subject: d.subject ?? "", body: d.body ?? "" });
     } catch (e) {
-      setPreviewError(e instanceof Error ? e.message : "Preview failed");
+      const msg = getErrorMessage(e);
+      setPreviewError(msg);
+      toast.error(msg);
     } finally {
       setPreviewLoading(false);
     }
@@ -267,8 +274,9 @@ function NotificationTemplatesPageInner() {
     setTestSendLoading(true);
     try {
       await api.post(`/api/platform/notification-templates/${templateToEdit.id}/test-send`);
+      toast.success("Test email sent");
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     } finally {
       setTestSendLoading(false);
     }
@@ -278,11 +286,12 @@ function NotificationTemplatesPageInner() {
     if (!templateToDelete) return;
     try {
       await api.delete(`/api/platform/notification-templates/${templateToDelete.id}`);
+      toast.success("Template deleted");
       setDeleteConfirmOpen(false);
       setTemplateToDelete(null);
       await invalidateTemplates();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 

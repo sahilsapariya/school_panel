@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateTenantModal } from "@/components/forms/create-tenant-modal";
 import { Plus } from "lucide-react";
 import type { TenantListItem } from "@/types";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
 
 const LIMIT = 10;
 
@@ -27,10 +28,11 @@ export default function TenantsPage() {
           ? `/api/platform/tenants/${tenant.id}/suspend`
           : `/api/platform/tenants/${tenant.id}/activate`;
       await api.patch(path);
+      toast.success(tenant.status === "active" ? "Tenant suspended" : "Tenant activated");
       await invalidateTenants();
       await invalidateDashboard();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -41,9 +43,10 @@ export default function TenantsPage() {
   const handleResetAdmin = async (tenant: TenantListItem) => {
     try {
       await api.post(`/api/platform/tenants/${tenant.id}/reset-admin`);
+      toast.success("Admin password reset link sent");
       await invalidateTenants();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 

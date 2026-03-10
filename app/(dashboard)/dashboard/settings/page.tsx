@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
 import { useState } from "react";
 
 const SETTING_KEYS = [
@@ -74,9 +75,10 @@ export default function SettingsPage() {
         }
       });
       await api.patch("/api/platform/settings", payload);
+      toast.success("Settings saved");
       await invalidateSettings();
     } catch (err) {
-      console.error(err);
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, usePathname } from "next/navigation";
+import { toast } from "sonner";
 import {
   login as loginApi,
   logout as logoutApi,
@@ -31,6 +32,9 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: (values: LoginFormValues) => loginApi(values),
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Login failed");
+    },
     onSuccess: async (data) => {
       const token = data?.data?.access_token;
       if (!token) {

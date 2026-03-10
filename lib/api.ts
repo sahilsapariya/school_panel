@@ -36,6 +36,13 @@ export class ApiError extends Error {
   }
 }
 
+/** Extract a user-friendly error message from a caught error (ApiError, Error, or unknown). */
+export function getErrorMessage(e: unknown): string {
+  if (e instanceof ApiError) return e.message;
+  if (e instanceof Error) return e.message;
+  return "Something went wrong";
+}
+
 export async function apiRequest<T>(
   url: string,
   options: RequestInit = {}

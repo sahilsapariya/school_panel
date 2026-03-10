@@ -38,12 +38,21 @@ import {
   changePlanSchema,
   editTenantSchema,
   addTenantAdminSchema,
+  updateTenantAdminSchema,
   type ChangePlanFormValues,
   type EditTenantFormValues,
   type AddTenantAdminFormValues,
+  type UpdateTenantAdminFormValues,
 } from "@/lib/schemas";
-import { api } from "@/lib/api";
-import { ArrowLeft, Pause, Play, KeyRound, Trash2, CreditCard, Pencil, UserPlus, Mail, MessageSquare, Bell } from "lucide-react";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
+import { ArrowLeft, Pause, Play, KeyRound, Trash2, CreditCard, Pencil, UserPlus, Mail, MessageSquare, Bell, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 
@@ -62,6 +71,8 @@ export function TenantDetailView({ id }: { id: string }) {
   const [editTenantOpen, setEditTenantOpen] = useState(false);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<{ id: string; email: string; name?: string } | null>(null);
+  const [adminToRemove, setAdminToRemove] = useState<{ id: string; email: string; name?: string } | null>(null);
 
   const changePlanForm = useForm<ChangePlanFormValues>({
     resolver: zodResolver(changePlanSchema),
@@ -83,16 +94,22 @@ export function TenantDetailView({ id }: { id: string }) {
     defaultValues: { email: "", name: "" },
   });
 
+  const editAdminForm = useForm<UpdateTenantAdminFormValues>({
+    resolver: zodResolver(updateTenantAdminSchema),
+    defaultValues: { email: "", name: "" },
+  });
+
 
   const handleChangePlan = async (values: ChangePlanFormValues) => {
     try {
       await api.patch(`/api/platform/tenants/${id}/change-plan`, { plan_id: values.planId });
+      toast.success("Plan updated");
       changePlanForm.reset({ planId: values.planId });
       setChangePlanOpen(false);
       await invalidateTenant();
       await invalidateTenants();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -104,32 +121,35 @@ export function TenantDetailView({ id }: { id: string }) {
           ? `/api/platform/tenants/${id}/suspend`
           : `/api/platform/tenants/${id}/activate`;
       await api.patch(path);
+      toast.success(tenant.status === "active" ? "Tenant suspended" : "Tenant activated");
       await invalidateTenant();
       await invalidateTenants();
       await invalidateDashboard();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
   const handleResetAdmin = async () => {
     try {
       await api.post(`/api/platform/tenants/${id}/reset-admin`);
+      toast.success("Admin password reset link sent");
       await invalidateTenant();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
   const handleDelete = async () => {
     try {
       await api.delete(`/api/platform/tenants/${id}`);
+      toast.success("Tenant deleted");
       setDeleteConfirmOpen(false);
       await invalidateTenants();
       await invalidateDashboard();
       router.push("/dashboard/tenants");
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -141,11 +161,12 @@ export function TenantDetailView({ id }: { id: string }) {
         phone: values.phone || null,
         address: values.address || null,
       });
+      toast.success("Tenant updated");
       setEditTenantOpen(false);
       await invalidateTenant();
       await invalidateTenants();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -155,11 +176,39 @@ export function TenantDetailView({ id }: { id: string }) {
         email: values.email,
         name: values.name,
       });
+      toast.success("Admin added. Credentials will be sent by email.");
       setAddAdminOpen(false);
       addAdminForm.reset({ email: "", name: "" });
       await invalidateTenantAdmins();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
+    }
+  };
+
+  const handleEditAdmin = async (values: UpdateTenantAdminFormValues) => {
+    if (!editingAdmin) return;
+    try {
+      await api.patch(`/api/platform/tenants/${id}/admins/${editingAdmin.id}`, {
+        email: values.email,
+        name: values.name,
+      });
+      toast.success("Admin updated");
+      setEditingAdmin(null);
+      await invalidateTenantAdmins();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    }
+  };
+
+  const handleRemoveAdmin = async () => {
+    if (!adminToRemove) return;
+    try {
+      await api.delete(`/api/platform/tenants/${id}/admins/${adminToRemove.id}`);
+      toast.success("Admin removed");
+      setAdminToRemove(null);
+      await invalidateTenantAdmins();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -201,9 +250,10 @@ export function TenantDetailView({ id }: { id: string }) {
   ) => {
     try {
       await api.patch(`/api/platform/tenants/${id}/notification-settings`, payload);
+      toast.success("Notification settings updated");
       await invalidateNotificationSettings();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -308,6 +358,32 @@ export function TenantDetailView({ id }: { id: string }) {
                     <p className="font-medium">{admin.name || admin.email}</p>
                     <p className="text-sm text-muted-foreground">{admin.email}</p>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <span className="sr-only">Actions</span>
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          editAdminForm.reset({ email: admin.email, name: admin.name ?? admin.email });
+                          setEditingAdmin(admin);
+                        }}
+                      >
+                        <Pencil className="mr-2 size-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setAdminToRemove(admin)}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Remove admin
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </li>
               ))}
             </ul>
@@ -554,6 +630,50 @@ export function TenantDetailView({ id }: { id: string }) {
               <Button type="submit">Add admin</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingAdmin} onOpenChange={(open) => !open && setEditingAdmin(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit school admin</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editAdminForm.handleSubmit(handleEditAdmin)} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" {...editAdminForm.register("email")} />
+              {editAdminForm.formState.errors.email && (
+                <p className="text-sm text-destructive">{editAdminForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input {...editAdminForm.register("name")} />
+              {editAdminForm.formState.errors.name && (
+                <p className="text-sm text-destructive">{editAdminForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingAdmin(null)}>Cancel</Button>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!adminToRemove} onOpenChange={(open) => !open && setAdminToRemove(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove admin</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Remove {adminToRemove?.name || adminToRemove?.email} as a school admin? They will lose admin access to this tenant
+            but their account will remain. You must keep at least one admin per tenant.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdminToRemove(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveAdmin}>Remove admin</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

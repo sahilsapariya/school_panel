@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createTenantSchema, type CreateTenantFormValues } from "@/lib/schemas";
 import { usePlans, usePlatformSettings } from "@/hooks/useApi";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -72,13 +73,14 @@ export function CreateTenantModal({
         admin_email: values.adminEmail,
       };
       await api.post("/api/platform/tenants", payload);
+      toast.success("Tenant created");
       form.reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (e) {
-      form.setError("root", {
-        message: e instanceof Error ? e.message : "Failed to create tenant",
-      });
+      const msg = getErrorMessage(e);
+      form.setError("root", { message: msg });
+      toast.error(msg);
     }
   };
 

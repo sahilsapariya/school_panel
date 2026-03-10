@@ -61,6 +61,12 @@ export const addTenantAdminSchema = z.object({
 });
 export type AddTenantAdminFormValues = z.infer<typeof addTenantAdminSchema>;
 
+export const updateTenantAdminSchema = z.object({
+  email: z.string().email("Invalid email"),
+  name: z.string().min(1, "Name is required"),
+});
+export type UpdateTenantAdminFormValues = z.infer<typeof updateTenantAdminSchema>;
+
 export const notificationTemplateSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
   body: z.string().min(1, "Body is required"),

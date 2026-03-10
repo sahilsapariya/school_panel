@@ -29,7 +29,8 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createPlanSchema, editPlanSchema, type CreatePlanFormValues, type EditPlanFormValues } from "@/lib/schemas";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { Plan } from "@/types";
 import { Switch } from "@/components/ui/switch";
@@ -71,11 +72,12 @@ export default function PlansPage() {
         max_teachers: values.maxTeachers,
         features_json: values.features ?? undefined,
       });
+      toast.success("Plan created");
       setCreateOpen(false);
       createForm.reset({ name: "", priceMonthly: 0, maxStudents: 100, maxTeachers: 20, features: defaultFeatures });
       await invalidatePlans();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -102,11 +104,12 @@ export default function PlansPage() {
         max_teachers: values.maxTeachers,
         features_json: values.features ?? undefined,
       });
+      toast.success("Plan updated");
       setEditOpen(false);
       setPlanToEdit(null);
       await invalidatePlans();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -119,11 +122,12 @@ export default function PlansPage() {
     if (!planToDelete) return;
     try {
       await api.delete(`/api/platform/plans/${planToDelete.id}`);
+      toast.success("Plan deleted");
       setDeleteConfirmOpen(false);
       setPlanToDelete(null);
       await invalidatePlans();
     } catch (e) {
-      console.error(e);
+      toast.error(getErrorMessage(e));
     }
   };
 
